@@ -1,9 +1,4 @@
-// Package ui renders the vyzorix CLI's terminal output: step markers, status
-// symbols, aligned fields and tables, in the shape a modern deploy CLI uses.
-//
-// Colour is emitted only when the writer is a terminal and the environment asks
-// for it, so redirected output — a CI log, a pipe — stays plain text. The
-// symbols and layout are identical either way.
+
 package ui
 
 import (
@@ -29,10 +24,7 @@ type Printer struct {
 	out   io.Writer
 	color bool
 }
-
-// New builds a Printer over w. Colour is on only when w is a terminal, TERM is
-// not "dumb", and NO_COLOR is unset; FORCE_COLOR overrides all three, which is
-// what makes the styled output testable and what a CI can ask for explicitly.
+.
 func New(w io.Writer) *Printer {
 	return &Printer{out: w, color: colorEnabled(w)}
 }
