@@ -1,6 +1,6 @@
 # vyzorix-cli
 
-The Vyzorix deploy CLI. It validates a `vyzorix.toml` manifest against the
+The Vyzorix deployment CLI. It validates a `vyzorix.toml` manifest against the
 server's published schema, uploads it, and drives the device secret surface.
 
 The server is authoritative: the CLI compiles nothing and never re-serialises
@@ -34,7 +34,7 @@ vyzorix secrets list  --device DEV <app>
 vyzorix secrets unset --device DEV <app> KEY
 ```
 
-Run `vyzorix login` once: it saves the server, the org and the credential to
+Run `vyzorix login` once: it and it's saved to the server, the org and the credential to
 `~/.config/vyzorix/config.toml` (mode 0600), so `deploy` and `secrets` need only
 the device. A flag or an environment variable overrides a saved value.
 
