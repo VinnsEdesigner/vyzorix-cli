@@ -526,7 +526,7 @@ func usage(out *os.File) {
   Install:
     curl -fsSL https://raw.githubusercontent.com/VinnsEdesigner/vyzorix-cli/main/install.sh | sh
     # Or with Go 1.27+:
-    go install github.com/VinnsEdesigner/vyzorix-cli@latest
+    go install github.com/VinnsEdesigner/vyzorix-cli/cmd/vyzorix@latest
 
   Usage:
     vyzorix login   --server URL --api-key KEY [--org ORG] [--device DEV]

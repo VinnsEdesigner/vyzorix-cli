@@ -16,7 +16,7 @@ curl -fsSL https://raw.githubusercontent.com/VinnsEdesigner/vyzorix-cli/main/ins
 Or, with Go 1.27+:
 
 ```sh
-go install github.com/VinnsEdesigner/vyzorix-cli@latest
+go install github.com/VinnsEdesigner/vyzorix-cli/cmd/vyzorix@latest
 ```
 
 Both place `vyzorix` on your PATH (`~/.local/bin` for the script, `$(go env

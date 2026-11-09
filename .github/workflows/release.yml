@@ -43,7 +43,7 @@ jobs:
             # which are pure Go, so every target builds from one runner.
             CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
               go build -trimpath -ldflags "-s -w -X main.version=$version" \
-              -o "dist/vyzorix-$os-$arch$ext" .
+              -o "dist/vyzorix-$os-$arch$ext" ./cmd/vyzorix
           done
 
           # Checksums are what the installer verifies, so a corrupted or swapped
