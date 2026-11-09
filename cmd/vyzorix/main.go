@@ -1,11 +1,4 @@
-// Command vyzorix is the deploy CLI (US-009, FR-23). It compiles nothing: the
-// server is authoritative (FR-1). It validates a manifest against the server's
-// published schema, uploads it, and drives the secret surface.
-//
-// `vyzorix login` saves a server, an org and a credential to the user's config
-// file, so `deploy` and `secrets` run without repeating them. A flag or an
-// environment variable overrides the saved value; the resolution order is
-// flag, then environment, then config.
+
 package main
 
 import (
@@ -76,10 +69,6 @@ func run(args []string, stdout, stderr *os.File) int {
 	}
 }
 
-// runLogin implements `vyzorix login`. It proves the credential against the
-// server with a whoami call, then saves it. Nothing is written until the server
-// has confirmed the credential works, so a bad key never leaves a broken config
-// behind.
 func runLogin(ctx context.Context, args []string, stdout, stderr *os.File) int {
 	fs := flag.NewFlagSet("login", flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -159,7 +148,6 @@ func runLogin(ctx context.Context, args []string, stdout, stderr *os.File) int {
 	return exitOK
 }
 
-// runLogout removes the saved config.
 func runLogout(stdout, stderr *os.File) int {
 	if err := config.Remove(); err != nil {
 		ui.New(stderr).Error("could not remove config: %v", err)
@@ -172,8 +160,6 @@ func runLogout(stdout, stderr *os.File) int {
 	return exitOK
 }
 
-// runWhoami implements `vyzorix whoami`: the identity the saved credential
-// reaches, without changing it.
 func runWhoami(ctx context.Context, args []string, stdout, stderr *os.File) int {
 	fs := flag.NewFlagSet("whoami", flag.ContinueOnError)
 	fs.SetOutput(stderr)
