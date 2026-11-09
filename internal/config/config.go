@@ -1,7 +1,4 @@
-// Package config stores what `vyzorix login` persists between invocations: the
-// server, the org, and the credential. It is the CLI's own state, not the
-// server's, so it lives under the user's config directory and is written 0600 —
-// the file holds a credential.
+
 package config
 
 import (
