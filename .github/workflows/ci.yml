@@ -26,6 +26,15 @@ jobs:
       - name: Test
         run: go test ./... -count=1
 
+      - name: No ignored Go sources
+        run: |
+          ignored=$(git status --ignored --porcelain | awk '/^!! .*\.go$/ {print $2}')
+          if [ -n "$ignored" ]; then
+            echo "these Go files are ignored and would not be committed:"
+            echo "$ignored"
+            exit 1
+          fi
+
       - name: gofmt
         run: |
           unformatted=$(gofmt -l .)
