@@ -1,7 +1,4 @@
-// Package deploy implements the vyzorix deploy CLI: it validates a manifest
-// against the server's published schema, uploads it, and drives the secret
-// surface. The wire types come from the spec module (FR-23), so the
-// CLI cannot drift from the server's shape.
+
 package deploy
 
 import (
@@ -20,13 +17,6 @@ import (
 	"time"
 )
 
-// Auth is how the CLI authenticates. Exactly one mode is used:
-//
-//   - APIKey is an operator key. It reaches every device the operator may
-//     deploy to, and the server requires every request it carries to be signed
-//     with a secret derived from the key (see sign).
-//   - DeployCredential is a device-scoped CI token. It reaches one device, and
-//     the server accepts it unsigned because the token itself is the authority.
 type Auth struct {
 	APIKey           string
 	DeployCredential string
