@@ -24,7 +24,6 @@ type Printer struct {
 	out   io.Writer
 	color bool
 }
-.
 func New(w io.Writer) *Printer {
 	return &Printer{out: w, color: colorEnabled(w)}
 }
