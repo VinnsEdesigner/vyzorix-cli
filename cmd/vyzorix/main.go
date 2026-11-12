@@ -507,7 +507,10 @@ func parseInterspersed(fs *flag.FlagSet, args []string) ([]string, error) {
 }
 
 func usage(out *os.File) {
-	fmt.Fprint(out, `Vyzorix - deploy applications to your device
+	fmt.Fprint(out, `Vyzorix Deploy CLI - push manifests and secrets to your fleet
+
+  This is the deploy side. To reach a device's own APIs (camera, battery, wifi,
+  apps) run the Vyzorix CLI inside the device's container.
 
   Install:
     curl -fsSL https://raw.githubusercontent.com/VinnsEdesigner/vyzorix-cli/main/install.sh | sh

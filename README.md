@@ -1,7 +1,10 @@
 # vyzorix-cli
 
-The Vyzorix deployment CLI. It validates a `vyzorix.toml` manifest against the
+The **Vyzorix Deploy CLI**. It validates a `vyzorix.toml` manifest against the
 server's published schema, uploads it, and drives the device secret surface.
+
+This is the deploy side, run from your machine or CI. To reach a device's own
+APIs from the device itself, that is the **Vyzorix CLI** inside the container.
 
 The server is authoritative: the CLI compiles nothing and never re-serialises
 the manifest. It pre-validates so a schema error is caught locally with a
