@@ -28,7 +28,7 @@ func deviceServer(t *testing.T, abis []string) *httptest.Server {
 func TestResolveABIsRefusesARecipeAbiTheDeviceCannotRun(t *testing.T) {
 	// The recipe targets arm64-v8a but the device runs x86_64: building it would
 	// produce an artifact the device cannot start, so it is refused here rather
-	// than discovered on the device (contract R21).
+	// than discovered on the device.
 	server := deviceServer(t, []string{"x86_64"})
 	defer server.Close()
 

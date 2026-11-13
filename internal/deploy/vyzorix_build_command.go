@@ -198,7 +198,7 @@ func (c *Client) Build(ctx context.Context, recipeData []byte, opts BuildOptions
 //
 // When the recipe sets `abi` AND a device is named, the two are checked against
 // each other: building for an ABI the device does not run is refused here rather
-// than discovered when the device cannot start the artifact (contract R21).
+// than discovered when the device cannot start the artifact.
 func (c *Client) resolveABIs(ctx context.Context, recipe *Recipe, opts BuildOptions) ([]string, error) {
 	if len(recipe.Typed.Build.Abi) > 0 {
 		if opts.Device == "" {

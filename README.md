@@ -51,7 +51,7 @@ architecture from the device, delegates to **`vyzorix-builder`** (a separate
 binary, found via `$VYZORIX_BUILDER` or on `PATH`), and renders the
 `vyzorix.toml` manifest from what the builder produced. The CLI compiles nothing
 itself, so its release stays CGO-free and small. `vyzorix deploy --build` runs
-both. See `VYZORIX/DOCUMENTATION/BUILD_TOOL_CONTRACT.md`.
+both. See `VYZORIX/DOCUMENTATION/DEPLOY_BUILD.md`.
 
 ## Design
 
