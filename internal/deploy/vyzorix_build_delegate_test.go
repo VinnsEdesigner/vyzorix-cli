@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -125,4 +126,60 @@ func asBuilderError(err error, target **BuilderError) bool {
 	}
 
 	return ok
+}
+
+func TestBuildRequestCarriesTheCompositeAndLimitFields(t *testing.T) {
+	// The CLI must be able to select the composite backend and set limits; the
+	// request is the one channel for both. A missing field here is a silently
+	// ignored flag.
+	req := BuildRequest{
+		Publish: Publish{
+			Backend:       "composite",
+			Namespace:     "owner",
+			Repo:          "app",
+			Visibility:    "public",
+			DeviceBackend: "object",
+			RecordBackend: "ghcr",
+		},
+		Limits: &Limits{
+			TimeoutSeconds: 900,
+			Memory:         "4g",
+			CPUS:           "2",
+			Pull:           true,
+			SecretIDs:      []string{"GITHUB_TOKEN"},
+		},
+	}
+
+	encoded, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	var back BuildRequest
+	if err := json.Unmarshal(encoded, &back); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	if back.Publish.DeviceBackend != "object" || back.Publish.RecordBackend != "ghcr" {
+		t.Errorf("publish = %+v, want device=object record=ghcr", back.Publish)
+	}
+
+	if back.Limits == nil {
+		t.Fatal("limits did not round-trip")
+	}
+
+	if back.Limits.TimeoutSeconds != 900 || back.Limits.Memory != "4g" || !back.Limits.Pull {
+		t.Errorf("limits = %+v", back.Limits)
+	}
+
+	if len(back.Limits.SecretIDs) != 1 || back.Limits.SecretIDs[0] != "GITHUB_TOKEN" {
+		t.Errorf("secretIds = %v", back.Limits.SecretIDs)
+	}
+
+	// The wire keys the builder reads.
+	for _, key := range []string{"deviceBackend", "recordBackend", "timeoutSeconds", "secretIds"} {
+		if !strings.Contains(string(encoded), key) {
+			t.Errorf("encoded request lacks %q: %s", key, encoded)
+		}
+	}
 }

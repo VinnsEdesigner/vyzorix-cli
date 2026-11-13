@@ -13,10 +13,22 @@ import (
 
 // Publish names where the builder stores the artifacts.
 type Publish struct {
-	Backend    string `json:"backend"`
-	Namespace  string `json:"namespace,omitempty"`
-	Repo       string `json:"repo,omitempty"`
-	Visibility string `json:"visibility,omitempty"`
+	Backend       string `json:"backend"`
+	Namespace     string `json:"namespace,omitempty"`
+	Repo          string `json:"repo,omitempty"`
+	Visibility    string `json:"visibility,omitempty"`
+	DeviceBackend string `json:"deviceBackend,omitempty"`
+	RecordBackend string `json:"recordBackend,omitempty"`
+}
+
+// Limits bounds what a build may consume. Zero/empty means the builder default.
+type Limits struct {
+	TimeoutSeconds int      `json:"timeoutSeconds,omitempty"`
+	Memory         string   `json:"memory,omitempty"`
+	CPUS           string   `json:"cpus,omitempty"`
+	PidsLimit      int      `json:"pidsLimit,omitempty"`
+	Pull           bool     `json:"pull,omitempty"`
+	SecretIDs      []string `json:"secretIds,omitempty"`
 }
 
 // BuildRequest is what the CLI sends the builder over stdin. Recipe carries the
@@ -30,6 +42,7 @@ type BuildRequest struct {
 	DeviceID   string   `json:"deviceId,omitempty"`
 	ABIs       []string `json:"abis,omitempty"`
 	Publish    Publish  `json:"publish"`
+	Limits     *Limits  `json:"limits,omitempty"`
 	DryRun     bool     `json:"dryRun,omitempty"`
 }
 

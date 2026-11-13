@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/VinnsEdesigner/vyzorix-cli/internal/config"
 	deploycli "github.com/VinnsEdesigner/vyzorix-cli/internal/deploy"
@@ -282,7 +283,14 @@ func runBuild(ctx context.Context, args []string, stdout, stderr *os.File) int {
 	server := fs.String("server", "", "server base URL (or VYZORIX_SERVER)")
 	version := fs.String("version", "", "artifact version (or the recipe's build.version)")
 	projectDir := fs.String("project-dir", ".", "the project root the recipe's paths are relative to")
-	publish := fs.String("publish", "ghcr", "publish backend (ghcr)")
+	publish := fs.String("publish", "ghcr", "publish backend (ghcr | object | composite)")
+	deviceBackend := fs.String("device-backend", "object", "composite: where the device fetches (object)")
+	recordBackend := fs.String("record-backend", "ghcr", "composite: where the build is recorded (ghcr)")
+	timeout := fs.Int("timeout", 0, "build timeout in seconds (0 = the builder's default)")
+	memory := fs.String("memory", "", "build memory cap, e.g. 4g")
+	cpus := fs.String("cpus", "", "build CPU cap, e.g. 2")
+	pull := fs.Bool("pull", false, "docker build --pull (refresh base images)")
+	secrets := fs.String("build-secret", "", "comma-separated env var names passed as BuildKit secrets")
 	namespace := fs.String("namespace", "", "registry namespace (GHCR owner) (or VYZORIX_BUILD_NAMESPACE)")
 	repo := fs.String("repo", "", "registry repository (or VYZORIX_BUILD_REPO)")
 	dryRun := fs.Bool("dry-run", false, "build, but publish nothing")
@@ -324,11 +332,14 @@ func runBuild(ctx context.Context, args []string, stdout, stderr *os.File) int {
 		ProjectDir:   *projectDir,
 		DryRun:       *dryRun,
 		Publish: deploycli.Publish{
-			Backend:    *publish,
-			Namespace:  resolve(*namespace, "VYZORIX_BUILD_NAMESPACE", ""),
-			Repo:       resolve(*repo, "VYZORIX_BUILD_REPO", ""),
-			Visibility: "public",
+			Backend:       *publish,
+			Namespace:     resolve(*namespace, "VYZORIX_BUILD_NAMESPACE", ""),
+			Repo:          resolve(*repo, "VYZORIX_BUILD_REPO", ""),
+			Visibility:    "public",
+			DeviceBackend: *deviceBackend,
+			RecordBackend: *recordBackend,
 		},
+		Limits: buildLimits(*timeout, *memory, *cpus, *pull, *secrets),
 	}, printer)
 	if err != nil {
 		return reportError(err, stderr)
@@ -649,4 +660,27 @@ func usage(out *os.File) {
 
   Set exactly one credential.
   `)
+}
+
+// buildLimits turns the build flags into the request's limits block. An empty
+// result (all zero) is nil, so the builder's own default applies.
+func buildLimits(timeout int, memory, cpus string, pull bool, secrets string) *deploycli.Limits {
+	var ids []string
+	for _, s := range strings.Split(secrets, ",") {
+		if s = strings.TrimSpace(s); s != "" {
+			ids = append(ids, s)
+		}
+	}
+
+	if timeout == 0 && memory == "" && cpus == "" && !pull && len(ids) == 0 {
+		return nil
+	}
+
+	return &deploycli.Limits{
+		TimeoutSeconds: timeout,
+		Memory:         memory,
+		CPUS:           cpus,
+		Pull:           pull,
+		SecretIDs:      ids,
+	}
 }

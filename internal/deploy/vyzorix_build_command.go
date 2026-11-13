@@ -33,6 +33,7 @@ type BuildOptions struct {
 	ManifestPath string
 	ProjectDir   string
 	Publish      Publish
+	Limits       *Limits
 	DryRun       bool
 }
 
