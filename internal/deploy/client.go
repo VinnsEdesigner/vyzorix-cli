@@ -1,4 +1,3 @@
-
 package deploy
 
 import (
@@ -108,7 +107,7 @@ func (c *Client) do(ctx context.Context, method, path string, body []byte, conte
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	payload, err := io.ReadAll(resp.Body)
 	if err != nil {

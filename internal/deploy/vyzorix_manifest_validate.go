@@ -79,7 +79,7 @@ func (c *Client) Schema(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	payload, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -102,24 +102,40 @@ func (c *Client) Schema(ctx context.Context) ([]byte, error) {
 // fragment-only, so keying it by that URL is enough to resolve it and a
 // self-hosted server needs no special case.
 func Validate(schemaURL string, schema []byte, manifest *Manifest) error {
+	return validateDocument(schemaURL, schema, manifest.Doc, "vyzorix.toml")
+}
+
+// validateDocument compiles a JSON Schema and validates one decoded document
+// against it. Shared by the manifest and recipe validators.
+func validateDocument(schemaURL string, schema []byte, doc map[string]any, what string) error {
+	compiled, err := compileSchema(schemaURL, schema)
+	if err != nil {
+		return err
+	}
+
+	if err := compiled.Validate(doc); err != nil {
+		return fmt.Errorf("%s does not match the server's schema: %w", what, err)
+	}
+
+	return nil
+}
+
+// compileSchema keys a fetched schema by the URL it came from and compiles it.
+func compileSchema(schemaURL string, schema []byte) (*jsonschema.Schema, error) {
 	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(schema))
 	if err != nil {
-		return fmt.Errorf("the server's schema could not be read: %w", err)
+		return nil, fmt.Errorf("the server's schema could not be read: %w", err)
 	}
 
 	compiler := jsonschema.NewCompiler()
 	if err := compiler.AddResource(schemaURL, doc); err != nil {
-		return fmt.Errorf("the server's schema could not be read: %w", err)
+		return nil, fmt.Errorf("the server's schema could not be read: %w", err)
 	}
 
 	compiled, err := compiler.Compile(schemaURL)
 	if err != nil {
-		return fmt.Errorf("the server's schema could not be compiled: %w", err)
+		return nil, fmt.Errorf("the server's schema could not be compiled: %w", err)
 	}
 
-	if err := compiled.Validate(manifest.Doc); err != nil {
-		return fmt.Errorf("vyzorix.toml does not match the server's schema: %w", err)
-	}
-
-	return nil
+	return compiled, nil
 }

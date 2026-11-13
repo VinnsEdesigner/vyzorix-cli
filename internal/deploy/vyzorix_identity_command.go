@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/VinnsEdesigner/vyzorix-cli/internal/ui"
 )
@@ -19,11 +20,13 @@ type Identity struct {
 	Device       *IdentityDev `json:"device,omitempty"`
 }
 
-// IdentityDev is the device half of an Identity.
+// IdentityDev is the device half of an Identity. SupportedABIs is what the device
+// reported at enroll; the build command targets it without the operator naming it.
 type IdentityDev struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Tier string `json:"tier"`
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	Tier          string   `json:"tier"`
+	SupportedABIs []string `json:"supportedAbis,omitempty"`
 }
 
 // Whoami resolves the credential's identity, optionally scoped to a device so its
@@ -81,6 +84,11 @@ func PrintIdentity(p *ui.Printer, id *Identity) {
 			device = id.Device.Name + " (" + id.Device.ID + ")"
 		}
 
-		p.Table([]string{"DEVICE", "TIER"}, [][]string{{device, id.Device.Tier}})
+		abis := "-"
+		if len(id.Device.SupportedABIs) > 0 {
+			abis = strings.Join(id.Device.SupportedABIs, ", ")
+		}
+
+		p.Table([]string{"DEVICE", "TIER", "ABIS"}, [][]string{{device, id.Device.Tier, abis}})
 	}
 }

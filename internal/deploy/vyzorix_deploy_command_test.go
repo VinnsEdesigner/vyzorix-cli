@@ -248,11 +248,11 @@ func TestDeploy_SignsAPIKeyRequests(t *testing.T) {
 	var sawDeploy bool
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/v1/deploy/schema/1":
+		switch r.URL.Path {
+		case "/v1/deploy/schema/1":
 			w.Header().Set("Content-Type", "application/schema+json")
 			_, _ = w.Write(schemaFromSpec(t))
-		case r.URL.Path == "/v1/deploy":
+		case "/v1/deploy":
 			if !verifySignature(t, r, apiKey) {
 				w.WriteHeader(http.StatusUnauthorized)
 

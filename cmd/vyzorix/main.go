@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -50,10 +49,12 @@ func run(args []string, stdout, stderr *os.File) int {
 		return runWhoami(ctx, args[1:], stdout, stderr)
 	case "deploy":
 		return runDeploy(ctx, args[1:], stdout, stderr)
+	case "build":
+		return runBuild(ctx, args[1:], stdout, stderr)
 	case "secrets":
 		return runSecrets(ctx, args[1:], stdout, stderr)
 	case "-v", "--version", "version":
-		fmt.Fprintf(stdout, "vyzorix %s\n", version)
+		_, _ = fmt.Fprintf(stdout, "vyzorix %s\n", version)
 
 		return exitOK
 	case "-h", "--help", "help":
@@ -62,7 +63,7 @@ func run(args []string, stdout, stderr *os.File) int {
 		return exitOK
 	default:
 		ui.New(stderr).Error("unknown command %q", args[0])
-		fmt.Fprintln(stderr)
+		_, _ = fmt.Fprintln(stderr)
 		usage(stderr)
 
 		return exitUsage
@@ -206,6 +207,8 @@ func runDeploy(ctx context.Context, args []string, stdout, stderr *os.File) int 
 	file := fs.String("file", "vyzorix.toml", "path to the manifest")
 	server := fs.String("server", "", "server base URL (or VYZORIX_SERVER)")
 	dryRun := fs.Bool("dry-run", false, "compile and authorise, but do not deliver")
+	build := fs.Bool("build", false, "run `vyzorix build` first, then deploy the result")
+	recipe := fs.String("recipe", "vyzorix.build.toml", "path to the build recipe (with --build)")
 
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
@@ -214,6 +217,25 @@ func runDeploy(ctx context.Context, args []string, stdout, stderr *os.File) int 
 	base, orgID, auth, ok := resolveSettings(*server, *org, stderr)
 	if !ok {
 		return exitUsage
+	}
+
+	// `--build` builds first, then deploys what it wrote. The two commands' --file
+	// flags mean different files, so the build's arguments are composed explicitly:
+	// the recipe in, the deploy's manifest out.
+	if *build {
+		buildArgs := []string{"--device", *device, "--file", *recipe, "--manifest-out", *file}
+
+		if *server != "" {
+			buildArgs = append(buildArgs, "--server", *server)
+		}
+
+		if *org != "" {
+			buildArgs = append(buildArgs, "--org", *org)
+		}
+
+		if code := runBuild(ctx, buildArgs, stdout, stderr); code != exitOK {
+			return code
+		}
 	}
 
 	if err := requireDeploy(base, orgID, *device, auth); err != nil {
@@ -248,10 +270,88 @@ func runDeploy(ctx context.Context, args []string, stdout, stderr *os.File) int 
 	return exitOK
 }
 
+// runBuild implements `vyzorix build --device DEV [--file vyzorix.build.toml]`.
+func runBuild(ctx context.Context, args []string, stdout, stderr *os.File) int {
+	fs := flag.NewFlagSet("build", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+
+	org := fs.String("org", "", "organization id (or VYZORIX_ORG)")
+	device := fs.String("device", "", "target device id (needed unless the recipe sets abi)")
+	file := fs.String("file", "vyzorix.build.toml", "path to the build recipe")
+	out := fs.String("manifest-out", "vyzorix.toml", "where to write the rendered manifest")
+	server := fs.String("server", "", "server base URL (or VYZORIX_SERVER)")
+	version := fs.String("version", "", "artifact version (or the recipe's build.version)")
+	projectDir := fs.String("project-dir", ".", "the project root the recipe's paths are relative to")
+	publish := fs.String("publish", "ghcr", "publish backend (ghcr)")
+	namespace := fs.String("namespace", "", "registry namespace (GHCR owner) (or VYZORIX_BUILD_NAMESPACE)")
+	repo := fs.String("repo", "", "registry repository (or VYZORIX_BUILD_REPO)")
+	dryRun := fs.Bool("dry-run", false, "build, but publish nothing")
+
+	if err := fs.Parse(args); err != nil {
+		return exitUsage
+	}
+
+	base, orgID, auth, ok := resolveSettings(*server, *org, stderr)
+	if !ok {
+		return exitUsage
+	}
+
+	// The recipe's `abi` may make --device optional, but a credential is still
+	// needed to resolve the ABIs from the server when it does not.
+	if err := requireAuth(base, orgID, auth); err != nil {
+		ui.New(stderr).Error("%s", err)
+
+		return exitUsage
+	}
+
+	recipe, err := os.ReadFile(*file)
+	if err != nil {
+		ui.New(stderr).Error("could not read %s: %v", *file, err)
+
+		return exitUsage
+	}
+
+	client := deploycli.NewClient(base, orgID, auth)
+	printer := ui.New(stdout)
+
+	printer.Step("Building for %s", deviceLabel(*device))
+
+	outcome, err := client.Build(ctx, recipe, deploycli.BuildOptions{
+		Version:      *version,
+		Device:       *device,
+		Org:          orgID,
+		ManifestPath: *out,
+		ProjectDir:   *projectDir,
+		DryRun:       *dryRun,
+		Publish: deploycli.Publish{
+			Backend:    *publish,
+			Namespace:  resolve(*namespace, "VYZORIX_BUILD_NAMESPACE", ""),
+			Repo:       resolve(*repo, "VYZORIX_BUILD_REPO", ""),
+			Visibility: "public",
+		},
+	}, printer)
+	if err != nil {
+		return reportError(err, stderr)
+	}
+
+	deploycli.PrintBuildReport(printer, outcome)
+
+	return exitOK
+}
+
+// deviceLabel renders a device id for a step line, tolerating its absence.
+func deviceLabel(device string) string {
+	if device == "" {
+		return "the recipe's abi"
+	}
+
+	return device
+}
+
 // runSecrets implements `vyzorix secrets set|list|unset`.
 func runSecrets(ctx context.Context, args []string, stdout, stderr *os.File) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: vyzorix secrets set|list|unset ...")
+		_, _ = fmt.Fprintln(stderr, "usage: vyzorix secrets set|list|unset ...")
 
 		return exitUsage
 	}
@@ -283,7 +383,7 @@ func runSecretsSet(ctx context.Context, args []string, stdout, stderr *os.File) 
 		return exitUsage
 	}
 	if len(rest) != 2 {
-		fmt.Fprintln(stderr, "usage: vyzorix secrets set --device <id> --org <id> <app> KEY=VALUE")
+		_, _ = fmt.Fprintln(stderr, "usage: vyzorix secrets set --device <id> --org <id> <app> KEY=VALUE")
 
 		return exitUsage
 	}
@@ -334,7 +434,7 @@ func runSecretsList(ctx context.Context, args []string, stdout, stderr *os.File)
 		return exitUsage
 	}
 	if len(rest) != 1 {
-		fmt.Fprintln(stderr, "usage: vyzorix secrets list --device <id> --org <id> <app>")
+		_, _ = fmt.Fprintln(stderr, "usage: vyzorix secrets list --device <id> --org <id> <app>")
 
 		return exitUsage
 	}
@@ -375,7 +475,7 @@ func runSecretsUnset(ctx context.Context, args []string, stdout, stderr *os.File
 		return exitUsage
 	}
 	if len(rest) != 2 {
-		fmt.Fprintln(stderr, "usage: vyzorix secrets unset --device <id> --org <id> <app> KEY")
+		_, _ = fmt.Fprintln(stderr, "usage: vyzorix secrets unset --device <id> --org <id> <app> KEY")
 
 		return exitUsage
 	}
@@ -507,7 +607,7 @@ func parseInterspersed(fs *flag.FlagSet, args []string) ([]string, error) {
 }
 
 func usage(out *os.File) {
-	fmt.Fprint(out, `Vyzorix Deploy CLI - push manifests and secrets to your fleet
+	_, _ = fmt.Fprint(out, `Vyzorix Deploy CLI - push manifests and secrets to your fleet
 
   This is the deploy side. To reach a device's own APIs (camera, battery, wifi,
   apps) run the Vyzorix CLI inside the device's container.
@@ -521,7 +621,8 @@ func usage(out *os.File) {
     vyzorix login   --server URL --api-key KEY [--org ORG] [--device DEV]
     vyzorix whoami  [--device DEV]
     vyzorix logout
-    vyzorix deploy  --device DEV [--org ORG] [--file vyzorix.toml] [--dry-run]
+    vyzorix build   --device DEV [--file vyzorix.build.toml] [--manifest-out vyzorix.toml]
+    vyzorix deploy  --device DEV [--org ORG] [--file vyzorix.toml] [--dry-run] [--build]
     vyzorix secrets set   --device DEV <app> KEY=VALUE
     vyzorix secrets list  --device DEV <app>
     vyzorix secrets unset --device DEV <app> KEY
@@ -529,6 +630,10 @@ func usage(out *os.File) {
   Run vyzorix login once. It saves the server, the org and the credential, so
   deploy and secrets need only the device. A flag or an environment variable
   overrides a saved value.
+
+  'vyzorix build' delegates to vyzorix-builder (found via $VYZORIX_BUILDER or on
+  PATH) to compile and publish the recipe's artifacts, then renders the manifest
+  from what it produced. 'vyzorix deploy --build' runs both.
 
   Flags come before the positional arguments.
 
@@ -538,6 +643,9 @@ func usage(out *os.File) {
     VYZORIX_API_KEY             operator API key (reaches many devices)
     VYZORIX_DEPLOY_CREDENTIAL   device-scoped CI token (reaches one device)
     VYZORIX_CONFIG              config file path (default ~/.config/vyzorix/config.toml)
+    VYZORIX_BUILDER             path to vyzorix-builder
+    VYZORIX_BUILD_NAMESPACE     registry namespace for --publish
+    VYZORIX_BUILD_REPO          registry repository for --publish
 
   Set exactly one credential.
   `)

@@ -1,4 +1,3 @@
-
 package ui
 
 import (
@@ -24,6 +23,7 @@ type Printer struct {
 	out   io.Writer
 	color bool
 }
+
 func New(w io.Writer) *Printer {
 	return &Printer{out: w, color: colorEnabled(w)}
 }
@@ -69,27 +69,27 @@ func (p *Printer) paint(seq, s string) string {
 // Step prints a top-level action: "==> Deploying to d_01H". The marker is the
 // bold, coloured anchor a reader scans for.
 func (p *Printer) Step(format string, a ...any) {
-	fmt.Fprintf(p.out, "%s %s\n", p.paint(bold+cyan, "==>"), fmt.Sprintf(format, a...))
+	_, _ = fmt.Fprintf(p.out, "%s %s\n", p.paint(bold+cyan, "==>"), fmt.Sprintf(format, a...))
 }
 
 // Success prints a completed action: "✓ Deployed version 3".
 func (p *Printer) Success(format string, a ...any) {
-	fmt.Fprintf(p.out, "%s %s\n", p.paint(green, "✓"), fmt.Sprintf(format, a...))
+	_, _ = fmt.Fprintf(p.out, "%s %s\n", p.paint(green, "✓"), fmt.Sprintf(format, a...))
 }
 
 // Warn prints a non-fatal note: "! ...".
 func (p *Printer) Warn(format string, a ...any) {
-	fmt.Fprintf(p.out, "%s %s\n", p.paint(yellow, "!"), fmt.Sprintf(format, a...))
+	_, _ = fmt.Fprintf(p.out, "%s %s\n", p.paint(yellow, "!"), fmt.Sprintf(format, a...))
 }
 
 // Error prints a failure: "✗ ...".
 func (p *Printer) Error(format string, a ...any) {
-	fmt.Fprintf(p.out, "%s %s\n", p.paint(red, "✗"), fmt.Sprintf(format, a...))
+	_, _ = fmt.Fprintf(p.out, "%s %s\n", p.paint(red, "✗"), fmt.Sprintf(format, a...))
 }
 
 // Detail prints an indented, dimmed line under a step or a result.
 func (p *Printer) Detail(format string, a ...any) {
-	fmt.Fprintf(p.out, "    %s\n", p.paint(dim, fmt.Sprintf(format, a...)))
+	_, _ = fmt.Fprintf(p.out, "    %s\n", p.paint(dim, fmt.Sprintf(format, a...)))
 }
 
 // Fields prints aligned "key  value" rows under a two-space indent. The key
@@ -103,7 +103,7 @@ func (p *Printer) Fields(pairs [][2]string) {
 	}
 
 	for _, kv := range pairs {
-		fmt.Fprintf(p.out, "  %s  %s\n", p.paint(dim, pad(kv[0], width)), kv[1])
+		_, _ = fmt.Fprintf(p.out, "  %s  %s\n", p.paint(dim, pad(kv[0], width)), kv[1])
 	}
 }
 
@@ -123,17 +123,17 @@ func (p *Printer) Table(headers []string, rows [][]string) {
 		}
 	}
 
-	fmt.Fprintf(p.out, "  %s\n", p.paint(dim, joinPadded(headers, widths)))
+	_, _ = fmt.Fprintf(p.out, "  %s\n", p.paint(dim, joinPadded(headers, widths)))
 
 	for _, row := range rows {
-		fmt.Fprintf(p.out, "  %s\n", joinPadded(row, widths))
+		_, _ = fmt.Fprintf(p.out, "  %s\n", joinPadded(row, widths))
 	}
 }
 
 // Blank prints one empty line, so a section can be separated without a literal
 // escape in the caller.
 func (p *Printer) Blank() {
-	fmt.Fprintln(p.out)
+	_, _ = fmt.Fprintln(p.out)
 }
 
 // joinPadded pads every cell but the last, so a trailing space never appears.

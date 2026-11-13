@@ -31,7 +31,8 @@ GOPATH)/bin` for `go install`). Set `PREFIX` to change the script's target, and
 ```sh
 vyzorix login  --server https://your-server --api-key KEY [--org ORG] [--device DEV]
 vyzorix whoami [--device DEV]
-vyzorix deploy --device DEV [--org ORG] [--file vyzorix.toml] [--dry-run]
+vyzorix build  --device DEV [--file vyzorix.build.toml] [--manifest-out vyzorix.toml]
+vyzorix deploy --device DEV [--org ORG] [--file vyzorix.toml] [--dry-run] [--build]
 vyzorix secrets set   --device DEV <app> KEY=VALUE
 vyzorix secrets list  --device DEV <app>
 vyzorix secrets unset --device DEV <app> KEY
@@ -43,6 +44,15 @@ the device. A flag or an environment variable overrides a saved value.
 
 Exit codes: `0` success, `1` the server refused, `2` usage or a local failure.
 
+## Building
+
+`vyzorix build` reads a `vyzorix.build.toml` recipe, resolves the target
+architecture from the device, delegates to **`vyzorix-builder`** (a separate
+binary, found via `$VYZORIX_BUILDER` or on `PATH`), and renders the
+`vyzorix.toml` manifest from what the builder produced. The CLI compiles nothing
+itself, so its release stays CGO-free and small. `vyzorix deploy --build` runs
+both. See `VYZORIX/DOCUMENTATION/BUILD_TOOL_CONTRACT.md`.
+
 ## Design
 
 - **The manifest schema is fetched, not embedded.** The CLI validates against
@@ -50,7 +60,10 @@ Exit codes: `0` success, `1` the server refused, `2` usage or a local failure.
   its own clients. It pins the version, so a manifest it accepted is a manifest
   the server accepts.
 - **The wire types come from `vyzorix-spec`.** The CLI and the server share one
-  declaration of the manifest shape, so neither can drift.
+  declaration of the manifest shape (and, since `v0.2.0`, the build recipe), so
+  neither can drift. The `build` command needs `vyzorix-spec` **v0.2.0 or later**;
+  the module is tagged and published, so `go build` resolves it without a
+  `replace`.
 - **The credential is proved before it is saved.** `login` calls the server
   first, so a bad key leaves no config behind.
 
